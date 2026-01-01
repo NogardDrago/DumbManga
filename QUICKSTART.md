@@ -71,35 +71,6 @@ npm run ios
 npm run android
 ```
 
-## Troubleshooting
-
-### "Cannot find module" errors
-```bash
-rm -rf node_modules
-npm install
-npm start -- --clear
-```
-
-### "getConstants" is null error
-This means gesture handler isn't initialized. **Already fixed!**
-- First line of App.tsx must be: `import 'react-native-gesture-handler';`
-- Clear cache: `npm start -- --clear`
-
-### Connection issues
-- Ensure phone and computer on same WiFi
-- Try tunnel mode: `npm start -- --tunnel`
-
-### App won't load
-- Check terminal for errors
-- Reload: Shake phone → "Reload"
-- Or press `r` in terminal
-
-### Type errors
-Run type check to see what's wrong:
-```bash
-npm run type-check
-```
-
 All type errors should be fixed. If you see any, check FIXES_APPLIED.md
 
 ## What's Next?
