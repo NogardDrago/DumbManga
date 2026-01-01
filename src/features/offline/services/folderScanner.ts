@@ -38,6 +38,7 @@ async function scanSingleBook(folderUri: string, imageFiles: FileInfo[]): Promis
   }));
   
   const bookTitle = getFolderName(folderUri);
+  console.log(`📁 Extracted folder name: "${bookTitle}" from URI: ${folderUri}`);
   
   const book: OfflineBook = {
     id: generateId(),
@@ -85,6 +86,7 @@ async function scanMultiChapterStructure(
   }
   
   const bookTitle = getFolderName(folderUri);
+  console.log(`📚 Extracted book name: "${bookTitle}" from URI: ${folderUri} (${chapters.length} chapters)`);
   
   const book: OfflineBook = {
     id: generateId(),
@@ -108,13 +110,18 @@ async function readDirectory(uri: string): Promise<FileInfo[]> {
       
       const fileInfos: FileInfo[] = await Promise.all(
         files.map(async (fileUri) => {
-          const info = await FileSystem.getInfoAsync(fileUri);
-          const name = fileUri.split('/').pop() || 'unknown';
+          const info = await FileSystem.StorageAccessFramework.getInfoAsync(fileUri);
+          let name = info.uri.split('/').pop() || 'unknown';
+          
+          if (name.includes(':')) {
+            const segments = name.split(':');
+            name = segments[segments.length - 1];
+          }
           
           return {
             name: decodeURIComponent(name),
             uri: fileUri,
-            isDirectory: info.isDirectory ?? false,
+            isDirectory: info.isDirectory || false,
           };
         })
       );
@@ -145,8 +152,27 @@ async function readDirectory(uri: string): Promise<FileInfo[]> {
 }
 
 function getFolderName(uri: string): string {
-  const parts = uri.split('/');
-  return parts[parts.length - 1] || 'Unknown';
+  try {
+    if (uri.startsWith('content://')) {
+      const decodedUri = decodeURIComponent(uri);
+      const parts = decodedUri.split('/');
+      const lastPart = parts[parts.length - 1];
+      
+      if (lastPart.includes(':')) {
+        const segments = lastPart.split(':');
+        return segments[segments.length - 1] || 'Unknown';
+      }
+      
+      return lastPart || 'Unknown';
+    }
+    
+    const parts = uri.split('/');
+    const lastPart = parts[parts.length - 1];
+    return decodeURIComponent(lastPart) || 'Unknown';
+  } catch (error) {
+    console.error('Error extracting folder name:', error);
+    return 'Unknown Folder';
+  }
 }
 
 export async function validateFolderAccess(uri: string): Promise<boolean> {
