@@ -17,15 +17,19 @@ interface Page {
 
 interface LongStripReaderProps {
   pages: Page[];
+  initialPage?: number;
   onPageChange?: (page: number) => void;
 }
 
 export const LongStripReader: React.FC<LongStripReaderProps> = ({
   pages,
+  initialPage = 0,
   onPageChange,
 }) => {
   const flatListRef = useRef<FlatList>(null);
-  const [loadedImages, setLoadedImages] = useState<Set<number>>(new Set([0]));
+  const [loadedImages, setLoadedImages] = useState<Set<number>>(
+    new Set([initialPage, initialPage > 0 ? initialPage - 1 : 0])
+  );
   const screenWidth = Dimensions.get('window').width;
 
   const handleScroll = useCallback(
@@ -88,6 +92,12 @@ export const LongStripReader: React.FC<LongStripReaderProps> = ({
         renderItem={renderPage}
         keyExtractor={keyExtractor}
         showsVerticalScrollIndicator={false}
+        initialScrollIndex={initialPage > 0 ? initialPage : undefined}
+        getItemLayout={(_, index) => ({
+          length: 800,
+          offset: 800 * index,
+          index,
+        })}
         onScroll={handleScroll}
         scrollEventThrottle={16}
         onViewableItemsChanged={handleViewableItemsChanged}

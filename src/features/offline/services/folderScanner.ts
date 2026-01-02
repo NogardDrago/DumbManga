@@ -108,23 +108,25 @@ async function readDirectory(uri: string): Promise<FileInfo[]> {
     if (uri.startsWith('content://')) {
       const files = await FileSystem.StorageAccessFramework.readDirectoryAsync(uri);
       
-      const fileInfos: FileInfo[] = await Promise.all(
-        files.map(async (fileUri) => {
-          const info = await FileSystem.StorageAccessFramework.getInfoAsync(fileUri);
-          let name = info.uri.split('/').pop() || 'unknown';
-          
-          if (name.includes(':')) {
-            const segments = name.split(':');
-            name = segments[segments.length - 1];
-          }
-          
-          return {
-            name: decodeURIComponent(name),
-            uri: fileUri,
-            isDirectory: info.isDirectory || false,
-          };
-        })
-      );
+      const fileInfos: FileInfo[] = files.map((fileUri) => {
+        let name = fileUri.split('/').pop() || 'unknown';
+        
+        if (name.includes(':')) {
+          const segments = name.split(':');
+          name = segments[segments.length - 1];
+        }
+        
+        name = decodeURIComponent(name);
+        
+        const hasExtension = /\.[a-zA-Z0-9]+$/.test(name);
+        const isDirectory = !hasExtension;
+        
+        return {
+          name,
+          uri: fileUri,
+          isDirectory,
+        };
+      });
       
       return fileInfos;
     }
