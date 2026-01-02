@@ -1,10 +1,10 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import { HomeScreen } from '../../features/online/screens';
+import { HomeScreen, ChapterSelectionScreen } from '../../features/online/screens';
 import { OfflineLibraryScreen } from '../../features/offline/screens';
 import { ReaderTabsScreen } from '../../features/reader/screens';
 import { RootStackParamList } from './types';
-import { colors } from '../../shared/theme';
+import { COLORS } from '../../shared/theme';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -14,27 +14,32 @@ export const RootNavigator: React.FC = () => {
       initialRouteName="Home"
       screenOptions={{
         headerStyle: {
-          backgroundColor: colors.surface,
-          borderBottomColor: colors.border,
+          backgroundColor: COLORS.surface,
+          borderBottomColor: COLORS.border,
         },
-        headerTintColor: colors.text,
+        headerTintColor: COLORS.text,
         headerTitleStyle: {
           fontWeight: '600',
         },
         cardStyle: {
-          backgroundColor: colors.background,
+          backgroundColor: COLORS.background,
         },
       }}
     >
       <Stack.Screen
         name="Home"
         component={HomeScreen}
-        options={{ title: 'Home' }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="OfflineLibrary"
         component={OfflineLibraryScreen}
         options={{ title: 'Offline Library' }}
+      />
+      <Stack.Screen
+        name="ChapterSelection"
+        component={ChapterSelectionScreen}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="ReaderTabs"

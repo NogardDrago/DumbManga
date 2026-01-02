@@ -6,6 +6,8 @@ import {
   FlatList,
   Image,
   Alert,
+  TouchableOpacity,
+  SafeAreaView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useOfflineStore } from '../../../app/store/offlineStore';
@@ -14,13 +16,10 @@ import { useSettingsStore } from '../../../app/store/settingsStore';
 import {
   pickFolder,
   pickPdfFile,
-  pickImageFiles,
-  isFolderPickingSupported,
-  getFolderAccessInstructions,
 } from '../services/documentPickerService';
 import { scanFolder } from '../services/folderScanner';
-import { colors, spacing, typography } from '../../../shared/theme';
-import { Button, EmptyState, Card, LoadingSpinner } from '../../../shared/components';
+import { COLORS, SPACING, TYPOGRAPHY, LAYOUT } from '../../../shared/theme';
+import { EmptyState, LoadingSpinner } from '../../../shared/components';
 import { ContinueReadingSection } from '../components/ContinueReadingSection';
 import { OfflineLibraryItem } from '../types';
 import { generateId } from '../../../shared/utils/imageUtils';
@@ -190,19 +189,30 @@ export const OfflineLibraryScreen: React.FC = () => {
   };
 
   const renderLibraryItem = ({ item }: { item: OfflineLibraryItem }) => (
-    <Card onPress={() => handleItemPress(item)} style={styles.libraryItem}>
-      {item.coverUri && (
-        <Image source={{ uri: item.coverUri }} style={styles.cover} />
-      )}
+    <TouchableOpacity
+      style={styles.libraryItem}
+      onPress={() => handleItemPress(item)}
+    >
+      <View style={styles.iconContainer}>
+        {item.coverUri ? (
+          <Image source={{ uri: item.coverUri }} style={styles.itemIcon} />
+        ) : (
+          <View style={styles.placeholderIcon}>
+            <Text style={styles.placeholderIconText}>
+              {item.type === 'pdf' ? '📄' : '📁'}
+            </Text>
+          </View>
+        )}
+      </View>
       <View style={styles.itemInfo}>
-        <Text style={styles.itemTitle} numberOfLines={2}>
+        <Text style={styles.itemTitle} numberOfLines={1}>
           {item.title}
         </Text>
-        <Text style={styles.itemType}>
-          {item.type === 'pdf' ? 'PDF' : 'Folder'}
+        <Text style={styles.itemCount}>
+          {item.type === 'pdf' ? 'PDF Document' : '10 items'}
         </Text>
       </View>
-    </Card>
+    </TouchableOpacity>
   );
 
   if (loading) {
@@ -210,96 +220,200 @@ export const OfflineLibraryScreen: React.FC = () => {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Offline Library</Text>
-        <View style={styles.actions}>
-          <Button
-            title="Pick Folder"
-            onPress={handlePickFolder}
-            size="small"
-            style={styles.actionButton}
-          />
-          <Button
-            title="Pick PDF"
-            onPress={handlePickPdf}
-            size="small"
-            variant="secondary"
-          />
+        <View style={styles.headerLeft}>
+          <Text style={styles.appIcon}>📚</Text>
+          <Text style={styles.appName}>YOMU READER</Text>
+        </View>
+        <View style={styles.headerRight}>
+          <TouchableOpacity 
+            style={styles.iconButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.icon}>🏠</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
+      <ContinueReadingSection />
+
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Library / Offline Folders</Text>
+      </View>
+
+      <TouchableOpacity style={styles.folderButton} onPress={handlePickFolder}>
+        <View style={styles.folderIconContainer}>
+          <Text style={styles.folderIcon}>📁</Text>
+        </View>
+        <Text style={styles.folderButtonText}>Open Device Folder</Text>
+      </TouchableOpacity>
+
       {libraryItems.length === 0 ? (
-        <>
-          <ContinueReadingSection />
-          <EmptyState
-            title="No items in library"
-            description="Add folders or PDFs to start reading offline"
-            actionLabel="Pick Folder"
-            onAction={handlePickFolder}
-          />
-        </>
+        <EmptyState
+          title="No items in library"
+          description="Add folders or PDFs to start reading offline"
+          actionLabel="Pick Folder"
+          onAction={handlePickFolder}
+        />
       ) : (
         <FlatList
           data={getRecentItems()}
           renderItem={renderLibraryItem}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
-          ListHeaderComponent={<ContinueReadingSection />}
         />
       )}
-    </View>
+
+      <TouchableOpacity style={styles.fab} onPress={handlePickFolder}>
+        <Text style={styles.fabIcon}>+</Text>
+      </TouchableOpacity>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: COLORS.background,
   },
   header: {
-    padding: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  title: {
-    ...typography.h2,
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  actions: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.divider,
   },
-  actionButton: {
-    marginRight: spacing.sm,
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  appIcon: {
+    fontSize: 20,
+  },
+  appName: {
+    ...TYPOGRAPHY.subtitle,
+    color: COLORS.text,
+    letterSpacing: 1,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  iconButton: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  icon: {
+    fontSize: 20,
+  },
+  sectionHeader: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
+  },
+  sectionTitle: {
+    ...TYPOGRAPHY.title,
+    color: COLORS.text,
+  },
+  folderButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.card,
+    marginHorizontal: SPACING.md,
+    marginBottom: SPACING.md,
+    padding: SPACING.md,
+    borderRadius: LAYOUT.cardRadius,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  folderIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: COLORS.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SPACING.md,
+  },
+  folderIcon: {
+    fontSize: 24,
+  },
+  folderButtonText: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.text,
+    fontWeight: '600',
   },
   list: {
-    padding: spacing.md,
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.xxl,
   },
   libraryItem: {
     flexDirection: 'row',
-    marginBottom: spacing.md,
+    alignItems: 'center',
+    padding: SPACING.md,
+    backgroundColor: COLORS.card,
+    borderRadius: LAYOUT.cardRadius,
+    marginBottom: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  cover: {
-    width: 60,
-    height: 90,
-    borderRadius: 4,
-    backgroundColor: colors.gray800,
+  iconContainer: {
+    marginRight: SPACING.md,
+  },
+  itemIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 6,
+  },
+  placeholderIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 6,
+    backgroundColor: COLORS.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  placeholderIconText: {
+    fontSize: 24,
   },
   itemInfo: {
     flex: 1,
-    marginLeft: spacing.md,
-    justifyContent: 'center',
   },
   itemTitle: {
-    ...typography.body,
-    color: colors.text,
-    marginBottom: spacing.xs,
+    ...TYPOGRAPHY.body,
+    color: COLORS.text,
+    fontWeight: '600',
+    marginBottom: SPACING.xs,
   },
-  itemType: {
-    ...typography.caption,
-    color: colors.textSecondary,
+  itemCount: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textSecondary,
+  },
+  fab: {
+    position: 'absolute',
+    right: SPACING.lg,
+    bottom: SPACING.lg,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: COLORS.text,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  fabIcon: {
+    fontSize: 28,
+    color: COLORS.background,
+    fontWeight: '300',
   },
 });
 

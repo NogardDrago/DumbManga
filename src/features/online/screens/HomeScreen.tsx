@@ -4,16 +4,17 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  Image,
   Alert,
+  TouchableOpacity,
+  SafeAreaView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { sourceManager } from '../services/sourceManager';
 import { MangaUpdate } from '../types';
 import { useReaderStore } from '../../../app/store/readerStore';
 import { useSettingsStore } from '../../../app/store/settingsStore';
-import { colors, spacing, typography } from '../../../shared/theme';
-import { Card, EmptyState, LoadingSpinner, Button } from '../../../shared/components';
+import { EmptyState, LoadingSpinner, MangaCard } from '../../../shared/components';
+import { COLORS, TYPOGRAPHY, SPACING, LAYOUT } from '../../../shared/theme';
 import { ContinueReadingSection } from '../../offline/components/ContinueReadingSection';
 import { generateId } from '../../../shared/utils/imageUtils';
 
@@ -43,61 +44,20 @@ export const HomeScreen: React.FC = () => {
     }
   };
 
-  const handleMangaPress = async (update: MangaUpdate) => {
-    try {
-      const pages = await sourceManager.getChapterPages(
-        update.manga.sourceType,
-        update.latestChapter.id
-      );
-      
-      const sessionId = generateId();
-      const title = `${update.manga.title} - Ch. ${update.latestChapter.chapterNumber}`;
-      
-      openSession({
-        sessionId,
-        title,
-        sourceType: 'mangadex',
-        content: {
-          type: 'mangadex',
-          manga: update.manga,
-          chapter: update.latestChapter,
-          pages,
-        },
-        readerMode: defaultReaderMode,
-        currentPage: 0,
-        totalPages: pages.length,
-        createdAt: new Date(),
-      });
-      
-      (navigation as any).navigate('ReaderTabs');
-      console.log(`🌐 Opened "${title}" in new tab`);
-    } catch (err: any) {
-      Alert.alert('Error', err.message);
-    }
+  const handleMangaPress = (update: MangaUpdate) => {
+    (navigation as any).navigate('ChapterSelection', { manga: update.manga });
   };
 
-  const renderUpdate = ({ item }: { item: MangaUpdate }) => (
-    <Card onPress={() => handleMangaPress(item)} style={styles.updateCard}>
-      {item.manga.coverUrl && (
-        <Image
-          source={{ uri: item.manga.coverUrl }}
-          style={styles.cover}
-          resizeMode="cover"
-        />
-      )}
-      <View style={styles.updateInfo}>
-        <Text style={styles.mangaTitle} numberOfLines={2}>
-          {item.manga.title}
-        </Text>
-        <Text style={styles.chapterInfo}>
-          Chapter {item.latestChapter.chapterNumber}
-          {item.latestChapter.title && `: ${item.latestChapter.title}`}
-        </Text>
-        <Text style={styles.updateTime}>
-          {formatRelativeTime(item.updatedAt)}
-        </Text>
-      </View>
-    </Card>
+  const renderUpdate = ({ item, index }: { item: MangaUpdate; index: number }) => (
+    <View style={[styles.gridItem, index % 2 === 0 ? styles.gridItemLeft : styles.gridItemRight]}>
+      <MangaCard
+        title={item.manga.title}
+        coverUrl={item.manga.coverUrl}
+        chapter={`Ch. ${item.latestChapter.chapterNumber}`}
+        isNew={true}
+        onPress={() => handleMangaPress(item)}
+      />
+    </View>
   );
 
   if (loading) {
@@ -118,39 +78,63 @@ export const HomeScreen: React.FC = () => {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>MangaDex Updates</Text>
-        <Button
-          title="Offline Library"
-          onPress={() => (navigation as any).navigate('OfflineLibrary')}
-          variant="secondary"
-          size="small"
-        />
+        <View style={styles.headerLeft}>
+          <Text style={styles.appIcon}>📚</Text>
+          <Text style={styles.appName}>YOMU READER</Text>
+        </View>
+        <View style={styles.headerRight}>
+          <TouchableOpacity 
+            style={styles.iconButton}
+            onPress={() => (navigation as any).navigate('OfflineLibrary')}
+          >
+            <Text style={styles.icon}>📁</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {updates.length === 0 ? (
-        <>
-          <ContinueReadingSection />
+      <FlatList
+        data={updates}
+        renderItem={renderUpdate}
+        keyExtractor={(item) => item.latestChapter.id}
+        numColumns={2}
+        contentContainerStyle={styles.list}
+        refreshing={loading}
+        onRefresh={loadUpdates}
+        ListHeaderComponent={
+          <>
+            <ContinueReadingSection />
+            
+            <TouchableOpacity 
+              style={styles.offlineButton}
+              onPress={() => (navigation as any).navigate('OfflineLibrary')}
+            >
+              <View style={styles.offlineIconContainer}>
+                <Text style={styles.offlineIcon}>📁</Text>
+              </View>
+              <View style={styles.offlineTextContainer}>
+                <Text style={styles.offlineTitle}>Offline Library</Text>
+                <Text style={styles.offlineSubtitle}>Read from device storage</Text>
+              </View>
+              <Text style={styles.offlineArrow}>›</Text>
+            </TouchableOpacity>
+
+            {updates.length > 0 && (
+              <Text style={styles.sectionTitle}>Latest Updates</Text>
+            )}
+          </>
+        }
+        ListEmptyComponent={
           <EmptyState
             title="No updates available"
             description="Check back later for new chapters"
             actionLabel="Refresh"
             onAction={loadUpdates}
           />
-        </>
-      ) : (
-        <FlatList
-          data={updates}
-          renderItem={renderUpdate}
-          keyExtractor={(item) => item.latestChapter.id}
-          contentContainerStyle={styles.list}
-          refreshing={loading}
-          onRefresh={loadUpdates}
-          ListHeaderComponent={<ContinueReadingSection />}
-        />
-      )}
-    </View>
+        }
+      />
+    </SafeAreaView>
   );
 };
 
@@ -169,51 +153,99 @@ function formatRelativeTime(date: Date): string {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: COLORS.background,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: spacing.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: COLORS.divider,
   },
-  title: {
-    ...typography.h2,
-    color: colors.text,
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  appIcon: {
+    fontSize: 20,
+  },
+  appName: {
+    ...TYPOGRAPHY.subtitle,
+    color: COLORS.text,
+    letterSpacing: 1,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  iconButton: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  icon: {
+    fontSize: 20,
   },
   list: {
-    padding: spacing.md,
+    padding: SPACING.md,
   },
-  updateCard: {
-    flexDirection: 'row',
-    marginBottom: spacing.md,
+  sectionTitle: {
+    ...TYPOGRAPHY.title,
+    color: COLORS.text,
+    marginBottom: SPACING.md,
   },
-  cover: {
-    width: 80,
-    height: 120,
-    borderRadius: 4,
-    backgroundColor: colors.gray800,
-  },
-  updateInfo: {
+  gridItem: {
     flex: 1,
-    marginLeft: spacing.md,
+  },
+  gridItemLeft: {
+    paddingRight: SPACING.sm,
+  },
+  gridItemRight: {
+    paddingLeft: SPACING.sm,
+  },
+  offlineButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.card,
+    marginHorizontal: SPACING.md,
+    marginBottom: SPACING.lg,
+    padding: SPACING.md,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  offlineIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: COLORS.surface,
     justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SPACING.md,
   },
-  mangaTitle: {
-    ...typography.h3,
-    color: colors.text,
-    marginBottom: spacing.xs,
+  offlineIcon: {
+    fontSize: 24,
   },
-  chapterInfo: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
+  offlineTextContainer: {
+    flex: 1,
   },
-  updateTime: {
-    ...typography.caption,
-    color: colors.textSecondary,
+  offlineTitle: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.text,
+    fontWeight: '600',
+    marginBottom: SPACING.xs,
+  },
+  offlineSubtitle: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textSecondary,
+  },
+  offlineArrow: {
+    fontSize: 24,
+    color: COLORS.textSecondary,
   },
 });
 

@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useReaderStore } from '../../../app/store';
 import { ReaderScreen } from './ReaderScreen';
-import { colors, spacing, typography } from '../../../shared/theme';
+import { COLORS, SPACING, TYPOGRAPHY } from '../../../shared/theme';
 import { EmptyState } from '../../../shared/components';
 
 export const ReaderTabsScreen: React.FC = () => {
@@ -25,60 +25,61 @@ export const ReaderTabsScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.topBar, { paddingTop: Math.max(insets.top, spacing.sm) }]}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.backText}>← Library</Text>
-        </TouchableOpacity>
+      {activeSession && (
+        <ReaderScreen sessionId={activeSession.sessionId} />
+      )}
 
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, SPACING.xs) }]}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.tabsScroll}
           contentContainerStyle={styles.tabsContainer}
         >
-          {sessions.map((session) => (
-            <View key={session.sessionId} style={styles.tabWrapper}>
-              <TouchableOpacity
-                style={[
-                  styles.tab,
-                  session.sessionId === activeSessionId && styles.tabActive,
-                ]}
-                onPress={() => switchSession(session.sessionId)}
-              >
-                <Text
+          {sessions.map((session) => {
+            const isActive = session.sessionId === activeSessionId;
+            const displayTitle = session.title.length > 20 
+              ? session.title.substring(0, 20) + '...' 
+              : session.title;
+
+            return (
+              <View key={session.sessionId} style={styles.tabWrapper}>
+                <TouchableOpacity
                   style={[
-                    styles.tabTitle,
-                    session.sessionId === activeSessionId && styles.tabTitleActive,
+                    styles.tab,
+                    isActive && styles.tabActive,
                   ]}
-                  numberOfLines={1}
+                  onPress={() => switchSession(session.sessionId)}
                 >
-                  {session.title}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={() => closeSession(session.sessionId)}
-              >
-                <Text style={styles.closeText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
+                  <Text style={[styles.tabText, isActive && styles.tabTextActive]} numberOfLines={1}>
+                    {displayTitle}
+                  </Text>
+                </TouchableOpacity>
+                {isActive && (
+                  <TouchableOpacity
+                    style={styles.closeButton}
+                    onPress={() => {
+                      closeSession(session.sessionId);
+                      if (sessions.length === 1) {
+                        navigation.goBack();
+                      }
+                    }}
+                  >
+                    <Text style={styles.closeIcon}>×</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            );
+          })}
           
           <TouchableOpacity 
-            style={styles.addTabButton}
+            style={styles.newTabButton}
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.addTabText}>+</Text>
+            <Text style={styles.newTabText}>+ New</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
-
-      {activeSession && (
-        <ReaderScreen sessionId={activeSession.sessionId} />
-      )}
     </View>
   );
 };
@@ -86,98 +87,77 @@ export const ReaderTabsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: COLORS.background,
   },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    backgroundColor: colors.gray900,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray800,
-    paddingBottom: 0,
-    minHeight: 50,
-  },
-  backButton: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.gray800,
-    marginLeft: spacing.sm,
-    marginBottom: spacing.xs,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-  },
-  backText: {
-    color: colors.white,
-    fontSize: 13,
-    fontWeight: '600',
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: COLORS.surface,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.divider,
+    paddingTop: SPACING.sm,
   },
   tabsScroll: {
-    flex: 1,
+    maxHeight: 48,
   },
   tabsContainer: {
-    paddingLeft: spacing.xs,
-    alignItems: 'flex-end',
-    paddingBottom: 0,
+    paddingHorizontal: SPACING.md,
+    alignItems: 'center',
+    gap: SPACING.xs,
   },
   tabWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 2,
   },
   tab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.gray800,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    minWidth: 100,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: 6,
+    backgroundColor: COLORS.card,
+    minWidth: 80,
     maxWidth: 160,
-    borderBottomWidth: 0,
   },
   tabActive: {
-    backgroundColor: colors.black,
-    borderTopWidth: 2,
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderTopColor: colors.white,
-    borderLeftColor: colors.gray700,
-    borderRightColor: colors.gray700,
+    backgroundColor: COLORS.text,
   },
-  tabTitle: {
-    ...typography.bodySmall,
-    color: colors.gray400,
-    flex: 1,
+  tabText: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.text,
+    fontWeight: '500',
   },
-  tabTitleActive: {
-    color: colors.white,
+  tabTextActive: {
+    color: COLORS.background,
     fontWeight: '600',
   },
   closeButton: {
-    marginLeft: spacing.xs,
-    padding: spacing.xs,
-    borderRadius: 4,
-  },
-  closeText: {
-    color: colors.gray600,
-    fontSize: 14,
-  },
-  addTabButton: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.gray800,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    marginLeft: 2,
+    width: 24,
+    height: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 0,
+    marginLeft: SPACING.xs,
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
   },
-  addTabText: {
-    color: colors.gray400,
-    fontSize: 18,
+  closeIcon: {
+    fontSize: 20,
+    color: COLORS.text,
     fontWeight: '300',
+  },
+  newTabButton: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: 6,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderStyle: 'dashed',
+  },
+  newTabText: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
   },
 });
 

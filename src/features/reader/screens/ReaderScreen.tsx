@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, Dimensions } from 'react-native';
 import { useReaderStore } from '../../../app/store';
 import { PageFlipReader } from '../components/PageFlipReader';
@@ -6,7 +6,7 @@ import { LongStripReader } from '../components/LongStripReader';
 import { ReaderControls } from '../components/ReaderControls';
 import { ReaderMode } from '../types';
 import { LoadingSpinner } from '../../../shared/components';
-import { colors, typography, spacing } from '../../../shared/theme';
+import { COLORS, TYPOGRAPHY, SPACING } from '../../../shared/theme';
 
 let PdfReader: any = null;
 try {
@@ -25,6 +25,7 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({ sessionId }) => {
   const { getSession, updateSession, updateCurrentPage } = useReaderStore();
   const session = getSession(sessionId);
   const [showControls, setShowControls] = useState(false);
+  const [hideTimeout, setHideTimeout] = useState<NodeJS.Timeout | null>(null);
 
   const handlePageChange = useCallback(
     (page: number) => {
@@ -36,14 +37,29 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({ sessionId }) => {
   const handleModeChange = useCallback(
     (mode: ReaderMode) => {
       updateSession(sessionId, { readerMode: mode });
-      setShowControls(false);
     },
     [sessionId, updateSession]
   );
 
   const toggleControls = useCallback(() => {
-    setShowControls((prev) => !prev);
-  }, []);
+    setShowControls((prev) => {
+      const newValue = !prev;
+      if (newValue) {
+        if (hideTimeout) clearTimeout(hideTimeout);
+        const timeout = setTimeout(() => setShowControls(false), 3000);
+        setHideTimeout(timeout);
+      } else {
+        if (hideTimeout) clearTimeout(hideTimeout);
+      }
+      return newValue;
+    });
+  }, [hideTimeout]);
+
+  useEffect(() => {
+    return () => {
+      if (hideTimeout) clearTimeout(hideTimeout);
+    };
+  }, [hideTimeout]);
 
   if (!session) {
     return <LoadingSpinner message="Loading reader..." />;
@@ -97,6 +113,7 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({ sessionId }) => {
         return (
           <LongStripReader
             pages={pages}
+            initialPage={session.currentPage}
             onPageChange={handlePageChange}
           />
         );
@@ -122,6 +139,7 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({ sessionId }) => {
         return (
           <LongStripReader
             pages={pages}
+            initialPage={session.currentPage}
             onPageChange={handlePageChange}
           />
         );
@@ -131,36 +149,44 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({ sessionId }) => {
     return <LoadingSpinner message="Unsupported content type" />;
   };
 
-  const { width, height } = Dimensions.get('window');
+  const progress = session.totalPages > 0 ? session.currentPage / session.totalPages : 0;
   
   return (
     <View style={styles.container}>
       {renderReader()}
-      
+
+      <View style={styles.progressBar} pointerEvents="none">
+        <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
+      </View>
+
+      <TouchableOpacity
+        style={styles.pageIndicator}
+        activeOpacity={0.7}
+        onPress={toggleControls}
+      >
+        <Text style={styles.pageText}>
+          {session.currentPage + 1} / {session.totalPages}
+        </Text>
+      </TouchableOpacity>
+
       {!showControls && (
-        <>
-          <TouchableOpacity
-            style={[styles.tapZone, styles.tapZoneTop, { width }]}
-            activeOpacity={0.3}
-            onPress={toggleControls}
-          >
-            <View style={styles.tapHint}>
-              <Text style={styles.tapHintText}>Tap for controls</Text>
-            </View>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[styles.tapZone, styles.tapZoneBottom, { width }]}
-            activeOpacity={0.3}
-            onPress={toggleControls}
-          />
-        </>
+        <TouchableOpacity
+          style={styles.centerTapZone}
+          activeOpacity={0.3}
+          onPress={toggleControls}
+        >
+          <View style={styles.tapHint}>
+            <Text style={styles.tapHintText}>⚙️</Text>
+          </View>
+        </TouchableOpacity>
       )}
 
       {showControls && session.content.type !== 'offline-pdf' && (
         <ReaderControls
           currentMode={session.readerMode}
           onModeChange={handleModeChange}
+          currentPage={session.currentPage}
+          totalPages={session.totalPages}
           onClose={() => setShowControls(false)}
         />
       )}
@@ -171,55 +197,79 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({ sessionId }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.black,
+    backgroundColor: COLORS.background,
   },
-  tapZone: {
+  progressBar: {
     position: 'absolute',
-    height: 80,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  tapZoneTop: {
     top: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.01)',
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    zIndex: 5,
   },
-  tapZoneBottom: {
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.01)',
+  progressFill: {
+    height: '100%',
+    backgroundColor: COLORS.text,
+  },
+  pageIndicator: {
+    position: 'absolute',
+    bottom: SPACING.lg,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  pageText: {
+    ...TYPOGRAPHY.caption,
+    color: COLORS.text,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    borderRadius: 16,
+  },
+  centerTapZone: {
+    position: 'absolute',
+    top: '15%',
+    right: SPACING.md,
+    zIndex: 10,
   },
   tapHint: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   tapHintText: {
-    color: 'rgba(255, 255, 255, 0.6)',
-    fontSize: 12,
+    fontSize: 24,
   },
   errorContainer: {
     flex: 1,
-    backgroundColor: colors.black,
+    backgroundColor: COLORS.background,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: spacing.xl,
+    padding: SPACING.xl,
   },
   errorTitle: {
-    ...typography.h2,
-    color: colors.white,
-    marginBottom: spacing.md,
+    ...TYPOGRAPHY.titleLarge,
+    color: COLORS.text,
+    marginBottom: SPACING.md,
     textAlign: 'center',
   },
   errorText: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginBottom: spacing.lg,
+    ...TYPOGRAPHY.body,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.lg,
     textAlign: 'center',
     lineHeight: 24,
   },
   errorHint: {
-    ...typography.bodySmall,
-    color: colors.gray600,
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textTertiary,
     fontFamily: 'monospace',
     textAlign: 'center',
   },
