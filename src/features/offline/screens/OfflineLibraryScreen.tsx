@@ -224,7 +224,7 @@ export const OfflineLibraryScreen: React.FC = () => {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={styles.appIcon}>📚</Text>
-          <Text style={styles.appName}>YOMU READER</Text>
+          <Text style={styles.appName}>Dumb READER</Text>
         </View>
         <View style={styles.headerRight}>
           <TouchableOpacity 
