@@ -16,6 +16,7 @@ import { useSettingsStore } from '../../../app/store/settingsStore';
 import {
   pickFolder,
   pickPdfFile,
+  pickImageFiles,
 } from '../services/documentPickerService';
 import { scanFolder } from '../services/folderScanner';
 import { COLORS, SPACING, TYPOGRAPHY, LAYOUT } from '../../../shared/theme';
@@ -95,6 +96,21 @@ export const OfflineLibraryScreen: React.FC = () => {
         
         addLibraryItem(item);
         openPdfInReader(item);
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePickImages = async () => {
+    try {
+      setLoading(true);
+      const picked = await pickImageFiles();
+      
+      if (picked.length > 0) {
+        handlePickedImages(picked);
       }
     } catch (error: any) {
       Alert.alert('Error', error.message);
@@ -239,15 +255,35 @@ export const OfflineLibraryScreen: React.FC = () => {
       <ContinueReadingSection />
 
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Library / Offline Folders</Text>
+        <Text style={styles.sectionTitle}>Add Content</Text>
       </View>
 
-      <TouchableOpacity style={styles.folderButton} onPress={handlePickFolder}>
-        <View style={styles.folderIconContainer}>
-          <Text style={styles.folderIcon}>📁</Text>
-        </View>
-        <Text style={styles.folderButtonText}>Open Device Folder</Text>
-      </TouchableOpacity>
+      <View style={styles.buttonGrid}>
+        <TouchableOpacity style={styles.pickButton} onPress={handlePickFolder}>
+          <View style={styles.buttonIconContainer}>
+            <Text style={styles.buttonIcon}>📁</Text>
+          </View>
+          <Text style={styles.buttonText}>Folder</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.pickButton} onPress={handlePickPdf}>
+          <View style={styles.buttonIconContainer}>
+            <Text style={styles.buttonIcon}>📄</Text>
+          </View>
+          <Text style={styles.buttonText}>PDF</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.pickButton} onPress={handlePickImages}>
+          <View style={styles.buttonIconContainer}>
+            <Text style={styles.buttonIcon}>🖼️</Text>
+          </View>
+          <Text style={styles.buttonText}>Images</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>My Library</Text>
+      </View>
 
       {libraryItems.length === 0 ? (
         <EmptyState
@@ -320,33 +356,40 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.title,
     color: COLORS.text,
   },
-  folderButton: {
+  buttonGrid: {
     flexDirection: 'row',
+    marginHorizontal: SPACING.md,
+    marginBottom: SPACING.lg,
+    gap: SPACING.sm,
+  },
+  pickButton: {
+    flex: 1,
+    flexDirection: 'column',
     alignItems: 'center',
     backgroundColor: COLORS.card,
-    marginHorizontal: SPACING.md,
-    marginBottom: SPACING.md,
-    padding: SPACING.md,
+    paddingVertical: SPACING.lg,
+    paddingHorizontal: SPACING.xs,
     borderRadius: LAYOUT.cardRadius,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  folderIconContainer: {
+  buttonIconContainer: {
     width: 48,
     height: 48,
     borderRadius: 24,
     backgroundColor: COLORS.surface,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: SPACING.md,
+    marginBottom: SPACING.sm,
   },
-  folderIcon: {
+  buttonIcon: {
     fontSize: 24,
   },
-  folderButtonText: {
-    ...TYPOGRAPHY.body,
+  buttonText: {
+    ...TYPOGRAPHY.caption,
     color: COLORS.text,
     fontWeight: '600',
+    textAlign: 'center',
   },
   list: {
     paddingHorizontal: SPACING.md,
