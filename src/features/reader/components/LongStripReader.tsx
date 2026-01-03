@@ -21,6 +21,12 @@ interface LongStripReaderProps {
   onPageChange?: (page: number) => void;
 }
 
+// Calculate consistent item height based on screen width
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+const ASPECT_RATIO = 0.7; // manga page width/height ratio
+const ITEM_HEIGHT = SCREEN_WIDTH / ASPECT_RATIO; // consistent height for all items
+
 export const LongStripReader: React.FC<LongStripReaderProps> = ({
   pages,
   initialPage = 0,
@@ -66,15 +72,15 @@ export const LongStripReader: React.FC<LongStripReaderProps> = ({
       const shouldLoad = loadedImages.has(item.index);
 
       return (
-        <View style={styles.pageContainer}>
+        <View style={[styles.pageContainer, { height: ITEM_HEIGHT }]}>
           {shouldLoad ? (
             <Image
               source={{ uri: item.uri }}
-              style={[styles.pageImage, { width: screenWidth }]}
+              style={[styles.pageImage, { width: screenWidth, height: ITEM_HEIGHT }]}
               resizeMode="contain"
             />
           ) : (
-            <View style={[styles.placeholder, { width: screenWidth }]} />
+            <View style={[styles.placeholder, { width: screenWidth, height: ITEM_HEIGHT }]} />
           )}
         </View>
       );
@@ -94,18 +100,19 @@ export const LongStripReader: React.FC<LongStripReaderProps> = ({
         showsVerticalScrollIndicator={false}
         initialScrollIndex={initialPage > 0 ? initialPage : undefined}
         getItemLayout={(_, index) => ({
-          length: 800,
-          offset: 800 * index,
+          length: ITEM_HEIGHT,
+          offset: ITEM_HEIGHT * index,
           index,
         })}
         onScroll={handleScroll}
         scrollEventThrottle={16}
         onViewableItemsChanged={handleViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
-        removeClippedSubviews
-        maxToRenderPerBatch={5}
-        windowSize={10}
-        initialNumToRender={3}
+        removeClippedSubviews={false}
+        maxToRenderPerBatch={3}
+        windowSize={5}
+        initialNumToRender={2}
+        decelerationRate="normal"
       />
     </View>
   );
@@ -117,15 +124,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.black,
   },
   pageContainer: {
+    justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: colors.black,
   },
   pageImage: {
-    height: undefined,
-    aspectRatio: 0.7, // Approximate manga page ratio
+    // width and height set dynamically in renderPage
   },
   placeholder: {
-    height: 600,
+    // width and height set dynamically in renderPage
     backgroundColor: colors.gray900,
   },
 });

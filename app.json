@@ -26,16 +26,21 @@
         "backgroundColor": "#000000"
       }
     },
-    "web": {
-    },
+    "web": {},
     "plugins": [
       [
         "expo-document-picker",
         {
           "iCloudContainerEnvironment": "Production"
         }
-      ]
-    ]
+      ],
+      "@config-plugins/react-native-blob-util",
+      "@config-plugins/react-native-pdf"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "18dc39d2-c795-4be1-8f27-42239f462981"
+      }
+    }
   }
 }
-

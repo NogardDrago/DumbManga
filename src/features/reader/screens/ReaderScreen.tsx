@@ -1,21 +1,13 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, Dimensions } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { useReaderStore } from '../../../app/store';
 import { PageFlipReader } from '../components/PageFlipReader';
 import { LongStripReader } from '../components/LongStripReader';
+import { PdfReader } from '../components/PdfReader';
 import { ReaderControls } from '../components/ReaderControls';
 import { ReaderMode } from '../types';
 import { LoadingSpinner } from '../../../shared/components';
 import { COLORS, TYPOGRAPHY, SPACING } from '../../../shared/theme';
-
-let PdfReader: any = null;
-try {
-  const pdfModule = require('../components/PdfReader');
-  PdfReader = pdfModule.PdfReader;
-  console.log('✅ PdfReader loaded');
-} catch (error) {
-  console.warn('⚠️ PdfReader not available in Expo Go:', error);
-}
 
 interface ReaderScreenProps {
   sessionId: string;
@@ -69,24 +61,10 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({ sessionId }) => {
     const { content, readerMode } = session;
 
     if (content.type === 'offline-pdf') {
-      if (!PdfReader) {
-        return (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorTitle}>PDF Reader Not Available</Text>
-            <Text style={styles.errorText}>
-              PDF reading requires a development build.{'\n'}
-              It's not supported in Expo Go.
-            </Text>
-            <Text style={styles.errorHint}>
-              Run: expo prebuild && expo run:android
-            </Text>
-          </View>
-        );
-      }
-      
       return (
         <PdfReader
           uri={content.pdf.uri}
+          mode={readerMode}
           onPageChange={(page: number, total: number) => {
             updateSession(sessionId, { currentPage: page, totalPages: total });
           }}
@@ -181,7 +159,7 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({ sessionId }) => {
         </TouchableOpacity>
       )}
 
-      {showControls && session.content.type !== 'offline-pdf' && (
+      {showControls && (
         <ReaderControls
           currentMode={session.readerMode}
           onModeChange={handleModeChange}
@@ -246,31 +224,5 @@ const styles = StyleSheet.create({
   },
   tapHintText: {
     fontSize: 24,
-  },
-  errorContainer: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: SPACING.xl,
-  },
-  errorTitle: {
-    ...TYPOGRAPHY.titleLarge,
-    color: COLORS.text,
-    marginBottom: SPACING.md,
-    textAlign: 'center',
-  },
-  errorText: {
-    ...TYPOGRAPHY.body,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.lg,
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  errorHint: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.textTertiary,
-    fontFamily: 'monospace',
-    textAlign: 'center',
   },
 });

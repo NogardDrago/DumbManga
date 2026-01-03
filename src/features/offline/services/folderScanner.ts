@@ -38,7 +38,6 @@ async function scanSingleBook(folderUri: string, imageFiles: FileInfo[]): Promis
   }));
   
   const bookTitle = getFolderName(folderUri);
-  console.log(`📁 Extracted folder name: "${bookTitle}" from URI: ${folderUri}`);
   
   const book: OfflineBook = {
     id: generateId(),
@@ -86,7 +85,6 @@ async function scanMultiChapterStructure(
   }
   
   const bookTitle = getFolderName(folderUri);
-  console.log(`📚 Extracted book name: "${bookTitle}" from URI: ${folderUri} (${chapters.length} chapters)`);
   
   const book: OfflineBook = {
     id: generateId(),

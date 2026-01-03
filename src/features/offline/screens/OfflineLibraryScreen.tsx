@@ -47,7 +47,6 @@ export const OfflineLibraryScreen: React.FC = () => {
               try {
                 const picked = await pickFolder();
                 if (picked) {
-                  console.log('Picked folder:', picked.uri);
                   const result = await scanFolder(picked.uri);
                   
                   if (result.books.length > 0) {
@@ -155,9 +154,8 @@ export const OfflineLibraryScreen: React.FC = () => {
       totalPages: book.pages.length,
       createdAt: new Date(),
     });
-    
+
     (navigation as any).navigate('ReaderTabs');
-    console.log(`📚 Opened "${book.title}" in new tab`);
   };
 
   const openPdfInReader = (item: OfflineLibraryItem) => {
@@ -180,9 +178,8 @@ export const OfflineLibraryScreen: React.FC = () => {
       totalPages: 0,
       createdAt: new Date(),
     });
-    
+
     (navigation as any).navigate('ReaderTabs');
-    console.log(`📄 Opened "${item.title}" in new tab`);
   };
 
   const handleItemPress = async (item: OfflineLibraryItem) => {
