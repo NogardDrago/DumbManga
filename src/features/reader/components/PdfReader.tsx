@@ -163,9 +163,6 @@ const styles = StyleSheet.create({
   },
 });
 
-// Memoize component to prevent re-renders when props haven't changed
-export const PdfReader = React.memo(PdfReaderComponent, (prevProps, nextProps) => {
-  // Only re-render if uri or mode changed
-  return prevProps.uri === nextProps.uri && prevProps.mode === nextProps.mode;
-});
+// Memoize component for performance, but allow re-renders when props change
+export const PdfReader = React.memo(PdfReaderComponent);
 

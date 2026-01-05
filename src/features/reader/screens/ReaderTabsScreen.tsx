@@ -26,7 +26,10 @@ export const ReaderTabsScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       {activeSession && (
-        <ReaderScreen sessionId={activeSession.sessionId} />
+        <ReaderScreen 
+          key={activeSession.sessionId} 
+          sessionId={activeSession.sessionId} 
+        />
       )}
 
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, SPACING.xs) }]}>

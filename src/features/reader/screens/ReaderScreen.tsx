@@ -63,6 +63,7 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({ sessionId }) => {
     if (content.type === 'offline-pdf') {
       return (
         <PdfReader
+          key={sessionId}
           uri={content.pdf.uri}
           mode={readerMode}
           onPageChange={(page: number, total: number) => {
@@ -81,6 +82,7 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({ sessionId }) => {
       if (readerMode === 'pageFlip') {
         return (
           <PageFlipReader
+            key={sessionId}
             pages={pages}
             initialPage={session.currentPage}
             onPageChange={handlePageChange}
@@ -90,6 +92,7 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({ sessionId }) => {
       } else {
         return (
           <LongStripReader
+            key={sessionId}
             pages={pages}
             initialPage={session.currentPage}
             onPageChange={handlePageChange}
@@ -107,6 +110,7 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({ sessionId }) => {
       if (readerMode === 'pageFlip') {
         return (
           <PageFlipReader
+            key={sessionId}
             pages={pages}
             initialPage={session.currentPage}
             onPageChange={handlePageChange}
@@ -116,6 +120,7 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({ sessionId }) => {
       } else {
         return (
           <LongStripReader
+            key={sessionId}
             pages={pages}
             initialPage={session.currentPage}
             onPageChange={handlePageChange}
