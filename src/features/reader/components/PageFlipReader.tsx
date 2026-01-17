@@ -28,14 +28,12 @@ export const PageFlipReader: React.FC<PageFlipReaderProps> = ({
   readingDirection = 'ltr',
 }) => {
   const flatListRef = useRef<FlatList>(null);
-  const [currentPage, setCurrentPage] = useState(initialPage);
   const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
   const handleViewableItemsChanged = useCallback(
     ({ viewableItems }: any) => {
       if (viewableItems.length > 0) {
         const page = viewableItems[0].index;
-        setCurrentPage(page);
         onPageChange?.(page);
       }
     },
@@ -86,12 +84,6 @@ export const PageFlipReader: React.FC<PageFlipReaderProps> = ({
         windowSize={5}
         initialNumToRender={1}
       />
-      
-      <View style={styles.pageIndicator}>
-        <Text style={styles.pageText}>
-          {currentPage + 1} / {pages.length}
-        </Text>
-      </View>
     </View>
   );
 };
@@ -109,20 +101,6 @@ const styles = StyleSheet.create({
   pageImage: {
     width: '100%',
     height: '100%',
-  },
-  pageIndicator: {
-    position: 'absolute',
-    bottom: 20,
-    alignSelf: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  pageText: {
-    color: colors.white,
-    fontSize: 14,
-    fontWeight: '600',
   },
 });
 

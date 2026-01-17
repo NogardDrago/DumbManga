@@ -41,9 +41,9 @@ export const LongStripReader: React.FC<LongStripReaderProps> = ({
   const handleScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
       const offsetY = event.nativeEvent.contentOffset.y;
-      const viewportHeight = event.nativeEvent.layoutMeasurement.height;
       
-      const approximatePage = Math.floor(offsetY / viewportHeight);
+      // Calculate page based on consistent ITEM_HEIGHT, not viewport
+      const approximatePage = Math.floor(offsetY / ITEM_HEIGHT);
       onPageChange?.(Math.min(approximatePage, pages.length - 1));
     },
     [pages.length, onPageChange]
@@ -98,7 +98,7 @@ export const LongStripReader: React.FC<LongStripReaderProps> = ({
         renderItem={renderPage}
         keyExtractor={keyExtractor}
         showsVerticalScrollIndicator={false}
-        initialScrollIndex={initialPage > 0 ? initialPage : undefined}
+        initialScrollIndex={initialPage}
         getItemLayout={(_, index) => ({
           length: ITEM_HEIGHT,
           offset: ITEM_HEIGHT * index,
