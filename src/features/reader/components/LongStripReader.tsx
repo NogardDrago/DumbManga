@@ -1,12 +1,11 @@
-import React, { useCallback, useState, useRef } from 'react';
+import React, { useCallback, useRef, memo, useState, useEffect } from 'react';
 import {
   FlatList,
   Image,
   View,
   StyleSheet,
   Dimensions,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
+  ActivityIndicator,
 } from 'react-native';
 import { colors } from '../../../shared/theme';
 
@@ -21,11 +20,66 @@ interface LongStripReaderProps {
   onPageChange?: (page: number) => void;
 }
 
-// Calculate consistent item height based on screen width
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const SCREEN_HEIGHT = Dimensions.get('window').height;
-const ASPECT_RATIO = 0.7; // manga page width/height ratio
-const ITEM_HEIGHT = SCREEN_WIDTH / ASPECT_RATIO; // consistent height for all items
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const DEFAULT_ASPECT_RATIO = 0.7;
+
+// A memoized image component that calculates its own aspect ratio 
+// avoiding full list re-renders on scroll
+const ReaderImage = memo(({ page, width }: { page: Page; width: number }) => {
+  const [aspectRatio, setAspectRatio] = useState(DEFAULT_ASPECT_RATIO);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let isActive = true;
+    Image.getSize(
+      page.uri,
+      (w, h) => {
+        if (isActive && w > 0 && h > 0) {
+          setAspectRatio(w / h);
+          setLoading(false);
+        }
+      },
+      () => {
+        if (isActive) {
+          setError(true);
+          setLoading(false);
+        }
+      }
+    );
+    return () => {
+      isActive = false;
+    };
+  }, [page.uri]);
+
+  const height = width / aspectRatio;
+
+  return (
+    <View style={[styles.pageContainer, { width, height }]}>
+      {loading && !error && (
+        <View style={[StyleSheet.absoluteFill, styles.center]}>
+          <ActivityIndicator color={colors.white} />
+        </View>
+      )}
+      {!error ? (
+        <Image
+          source={{ uri: page.uri }}
+          style={{ width, height }}
+          resizeMode="contain"
+          onLoad={() => setLoading(false)}
+        />
+      ) : (
+        <View style={[StyleSheet.absoluteFill, styles.center]}>
+          <Image 
+            source={{ uri: page.uri }} // try again natively
+            style={{ width, height }}
+            resizeMode="contain"
+          />
+        </View>
+      )}
+    </View>
+  );
+}, (prev, next) => prev.page.uri === next.page.uri && prev.width === next.width);
 
 export const LongStripReader: React.FC<LongStripReaderProps> = ({
   pages,
@@ -33,59 +87,30 @@ export const LongStripReader: React.FC<LongStripReaderProps> = ({
   onPageChange,
 }) => {
   const flatListRef = useRef<FlatList>(null);
-  const [loadedImages, setLoadedImages] = useState<Set<number>>(
-    new Set([initialPage, initialPage > 0 ? initialPage - 1 : 0])
-  );
-  const screenWidth = Dimensions.get('window').width;
 
-  const handleScroll = useCallback(
-    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const offsetY = event.nativeEvent.contentOffset.y;
-      
-      // Calculate page based on consistent ITEM_HEIGHT, not viewport
-      const approximatePage = Math.floor(offsetY / ITEM_HEIGHT);
-      onPageChange?.(Math.min(approximatePage, pages.length - 1));
-    },
-    [pages.length, onPageChange]
-  );
-
-  const handleViewableItemsChanged = useCallback(
+  const handleViewableItemsChanged = useRef(
     ({ viewableItems }: any) => {
-      const newLoadedImages = new Set(loadedImages);
-      viewableItems.forEach((item: any) => {
-        const index = item.index;
-        newLoadedImages.add(index);
-        if (index > 0) newLoadedImages.add(index - 1);
-        if (index < pages.length - 1) newLoadedImages.add(index + 1);
-      });
-      setLoadedImages(newLoadedImages);
-    },
-    [loadedImages, pages.length]
-  );
+      if (viewableItems && viewableItems.length > 0) {
+        // Finding the item with the highest visibility could be better, 
+        // but viewableItems[0] represents the topmost visible item.
+        const page = viewableItems[0].index;
+        if (onPageChange) {
+          onPageChange(page);
+        }
+      }
+    }
+  ).current;
 
   const viewabilityConfig = useRef({
-    itemVisiblePercentThreshold: 10,
+    itemVisiblePercentThreshold: 40,
+    minimumViewTime: 100, // Debounce page change event
   }).current;
 
   const renderPage = useCallback(
-    ({ item }: { item: Page }) => {
-      const shouldLoad = loadedImages.has(item.index);
-
-      return (
-        <View style={[styles.pageContainer, { height: ITEM_HEIGHT }]}>
-          {shouldLoad ? (
-            <Image
-              source={{ uri: item.uri }}
-              style={[styles.pageImage, { width: screenWidth, height: ITEM_HEIGHT }]}
-              resizeMode="contain"
-            />
-          ) : (
-            <View style={[styles.placeholder, { width: screenWidth, height: ITEM_HEIGHT }]} />
-          )}
-        </View>
-      );
-    },
-    [loadedImages, screenWidth]
+    ({ item }: { item: Page }) => (
+      <ReaderImage page={item} width={SCREEN_WIDTH} />
+    ),
+    []
   );
 
   const keyExtractor = useCallback((item: Page) => `page-${item.index}`, []);
@@ -99,20 +124,18 @@ export const LongStripReader: React.FC<LongStripReaderProps> = ({
         keyExtractor={keyExtractor}
         showsVerticalScrollIndicator={false}
         initialScrollIndex={initialPage}
-        getItemLayout={(_, index) => ({
-          length: ITEM_HEIGHT,
-          offset: ITEM_HEIGHT * index,
-          index,
-        })}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
+        onScrollToIndexFailed={(info) => {
+          const wait = new Promise(resolve => setTimeout(resolve, 500));
+          wait.then(() => {
+            flatListRef.current?.scrollToIndex({ index: info.index, animated: false });
+          });
+        }}
         onViewableItemsChanged={handleViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
-        removeClippedSubviews={false}
+        removeClippedSubviews={true}
         maxToRenderPerBatch={3}
         windowSize={5}
-        initialNumToRender={2}
-        decelerationRate="normal"
+        initialNumToRender={initialPage === 0 ? 2 : 1}
       />
     </View>
   );
@@ -124,16 +147,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.black,
   },
   pageContainer: {
+    backgroundColor: colors.black,
+    overflow: 'hidden',
+  },
+  center: {
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.black,
-  },
-  pageImage: {
-    // width and height set dynamically in renderPage
-  },
-  placeholder: {
-    // width and height set dynamically in renderPage
-    backgroundColor: colors.gray900,
   },
 });
-

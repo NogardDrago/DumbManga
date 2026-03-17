@@ -1,5 +1,6 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { View, StyleSheet, TouchableOpacity, Text, Pressable } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useReaderStore } from '../../../app/store';
 import { PageFlipReader } from '../components/PageFlipReader';
 import { LongStripReader } from '../components/LongStripReader';
@@ -18,6 +19,7 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({ sessionId }) => {
   const session = getSession(sessionId);
   const [showControls, setShowControls] = useState(false);
   const [hideTimeout, setHideTimeout] = useState<NodeJS.Timeout | null>(null);
+  const insets = useSafeAreaInsets();
 
   const handlePageChange = useCallback(
     (page: number) => {
@@ -38,7 +40,7 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({ sessionId }) => {
       const newValue = !prev;
       if (newValue) {
         if (hideTimeout) clearTimeout(hideTimeout);
-        const timeout = setTimeout(() => setShowControls(false), 3000);
+        const timeout = setTimeout(() => setShowControls(false), 4000);
         setHideTimeout(timeout);
       } else {
         if (hideTimeout) clearTimeout(hideTimeout);
@@ -52,6 +54,27 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({ sessionId }) => {
       if (hideTimeout) clearTimeout(hideTimeout);
     };
   }, [hideTimeout]);
+
+  // Memoize the pages array to prevent catastrophic re-renders on page change
+  const memoizedPages = useMemo(() => {
+    if (!session) return [];
+    
+    if (session.content.type === 'offline-folder') {
+      return session.content.book.pages.map((page) => ({
+        index: page.index,
+        uri: page.uri,
+      }));
+    }
+    
+    if (session.content.type === 'mangadex') {
+      return session.content.pages.map((page) => ({
+        index: page.index,
+        uri: page.url,
+      }));
+    }
+    
+    return [];
+  }, [session?.content]);
 
   if (!session) {
     return <LoadingSpinner message="Loading reader..." />;
@@ -73,17 +96,12 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({ sessionId }) => {
       );
     }
 
-    if (content.type === 'offline-folder') {
-      const pages = content.book.pages.map((page) => ({
-        index: page.index,
-        uri: page.uri,
-      }));
-
+    if (content.type === 'offline-folder' || content.type === 'mangadex') {
       if (readerMode === 'pageFlip') {
         return (
           <PageFlipReader
             key={sessionId}
-            pages={pages}
+            pages={memoizedPages}
             initialPage={session.currentPage}
             onPageChange={handlePageChange}
             readingDirection={session.readingDirection}
@@ -93,35 +111,7 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({ sessionId }) => {
         return (
           <LongStripReader
             key={sessionId}
-            pages={pages}
-            initialPage={session.currentPage}
-            onPageChange={handlePageChange}
-          />
-        );
-      }
-    }
-
-    if (content.type === 'mangadex') {
-      const pages = content.pages.map((page) => ({
-        index: page.index,
-        uri: page.url,
-      }));
-
-      if (readerMode === 'pageFlip') {
-        return (
-          <PageFlipReader
-            key={sessionId}
-            pages={pages}
-            initialPage={session.currentPage}
-            onPageChange={handlePageChange}
-            readingDirection={session.readingDirection}
-          />
-        );
-      } else {
-        return (
-          <LongStripReader
-            key={sessionId}
-            pages={pages}
+            pages={memoizedPages}
             initialPage={session.currentPage}
             onPageChange={handlePageChange}
           />
@@ -138,12 +128,22 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({ sessionId }) => {
     <View style={styles.container}>
       {renderReader()}
 
-      <View style={styles.progressBar} pointerEvents="none">
+      {/* Invisible center tap zone for toggling controls */}
+      {!showControls && (
+        <Pressable 
+          style={styles.touchableOverlay} 
+          onPress={toggleControls}
+        />
+      )}
+
+      {/* Progress Bar */}
+      <View style={[styles.progressBar, { top: insets.top }]} pointerEvents="none">
         <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
       </View>
 
+      {/* Page Indicator */}
       <TouchableOpacity
-        style={styles.pageIndicator}
+        style={[styles.pageIndicator, { bottom: Math.max(insets.bottom, SPACING.lg) }]}
         activeOpacity={0.7}
         onPress={toggleControls}
       >
@@ -152,18 +152,7 @@ export const ReaderScreen: React.FC<ReaderScreenProps> = ({ sessionId }) => {
         </Text>
       </TouchableOpacity>
 
-      {!showControls && (
-        <TouchableOpacity
-          style={styles.centerTapZone}
-          activeOpacity={0.3}
-          onPress={toggleControls}
-        >
-          <View style={styles.tapHint}>
-            <Text style={styles.tapHintText}>⚙️</Text>
-          </View>
-        </TouchableOpacity>
-      )}
-
+      {/* Modern Controls */}
       {showControls && (
         <ReaderControls
           currentMode={session.readerMode}
@@ -182,12 +171,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
+  touchableOverlay: {
+    position: 'absolute',
+    top: '20%',
+    bottom: '20%',
+    left: '20%',
+    right: '20%',
+    zIndex: 10,
+  },
   progressBar: {
     position: 'absolute',
-    top: 0,
     left: 0,
     right: 0,
-    height: 2,
+    height: 3,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     zIndex: 5,
   },
@@ -197,7 +193,6 @@ const styles = StyleSheet.create({
   },
   pageIndicator: {
     position: 'absolute',
-    bottom: SPACING.lg,
     left: 0,
     right: 0,
     alignItems: 'center',
@@ -205,29 +200,11 @@ const styles = StyleSheet.create({
   },
   pageText: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.text,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    color: '#E0E0E0',
+    backgroundColor: 'rgba(20, 20, 20, 0.85)',
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.xs,
     borderRadius: 16,
-  },
-  centerTapZone: {
-    position: 'absolute',
-    top: '15%',
-    right: SPACING.md,
-    zIndex: 10,
-  },
-  tapHint: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  tapHintText: {
-    fontSize: 24,
+    overflow: 'hidden',
   },
 });

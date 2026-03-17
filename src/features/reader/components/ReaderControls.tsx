@@ -23,40 +23,52 @@ export const ReaderControls: React.FC<ReaderControlsProps> = ({
   
   return (
     <View style={styles.container}>
+      {/* Top Header Bar */}
       <View style={[styles.topBar, { paddingTop: Math.max(insets.top, SPACING.md) }]}>
-        <TouchableOpacity onPress={onClose} style={styles.backButton}>
-          <Text style={styles.backIcon}>←</Text>
+        <TouchableOpacity onPress={onClose} style={styles.iconButton}>
+          <Text style={styles.iconText}>←</Text>
+        </TouchableOpacity>
+        
+        <View style={styles.titleContainer}>
+          <Text style={styles.titleText} numberOfLines={1}>Reader</Text>
+          <Text style={styles.statsText}>{currentPage + 1} of {totalPages}</Text>
+        </View>
+
+        <TouchableOpacity style={styles.iconButton}>
+          <Text style={styles.iconText}>⋮</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={[styles.rightBar, { paddingTop: Math.max(insets.top, SPACING.xl) }]}>
-        <TouchableOpacity
-          style={[
-            styles.iconButton,
-            currentMode === 'pageFlip' && styles.iconButtonActive,
-          ]}
-          onPress={() => onModeChange('pageFlip')}
-        >
-          <Text style={styles.iconText}>📖</Text>
-        </TouchableOpacity>
+      {/* Bottom Controls Bar */}
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, SPACING.md) }]}>
+        <View style={styles.bottomRow}>
+          <TouchableOpacity
+            style={[styles.bottomButton, currentMode === 'pageFlip' && styles.bottomButtonActive]}
+            onPress={() => onModeChange('pageFlip')}
+          >
+            <Text style={[styles.bottomButtonText, currentMode === 'pageFlip' && styles.bottomButtonTextActive]}>
+              Paging
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[
-            styles.iconButton,
-            currentMode === 'longStrip' && styles.iconButtonActive,
-          ]}
-          onPress={() => onModeChange('longStrip')}
-        >
-          <Text style={styles.iconText}>📜</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.bottomButton, currentMode === 'longStrip' && styles.bottomButtonActive]}
+            onPress={() => onModeChange('longStrip')}
+          >
+            <Text style={[styles.bottomButtonText, currentMode === 'longStrip' && styles.bottomButtonTextActive]}>
+              Webtoon
+            </Text>
+          </TouchableOpacity>
+        </View>
 
-        <TouchableOpacity style={styles.iconButton}>
-          <Text style={styles.iconText}>☀️</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.iconButton}>
-          <Text style={styles.iconText}>⚙️</Text>
-        </TouchableOpacity>
+        <View style={styles.actionsRow}>
+          <TouchableOpacity style={styles.actionIcon}>
+            <Text style={styles.iconText}>☀️</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionIcon}>
+            <Text style={styles.iconText}>⚙️</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -66,53 +78,88 @@ const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
     pointerEvents: 'box-none',
+    justifyContent: 'space-between',
+    zIndex: 20,
   },
   topBar: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
     flexDirection: 'row',
-    paddingHorizontal: SPACING.md,
-    paddingBottom: SPACING.sm,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    pointerEvents: 'box-none',
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderRadius: 22,
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.md,
+    backgroundColor: 'rgba(15, 15, 15, 0.9)',
     pointerEvents: 'auto',
   },
-  backIcon: {
-    fontSize: 24,
-    color: COLORS.text,
+  bottomBar: {
+    backgroundColor: 'rgba(15, 15, 15, 0.9)',
+    paddingTop: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    pointerEvents: 'auto',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
   },
-  rightBar: {
-    position: 'absolute',
-    top: 0,
-    right: SPACING.md,
-    paddingVertical: SPACING.md,
-    gap: SPACING.md,
-    pointerEvents: 'box-none',
+  titleContainer: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: SPACING.md,
+  },
+  titleText: {
+    ...TYPOGRAPHY.title,
+    color: COLORS.text,
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  statsText: {
+    ...TYPOGRAPHY.caption,
+    color: '#A0A0A0',
+    marginTop: 2,
   },
   iconButton: {
     width: 44,
     height: 44,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    borderRadius: 22,
-    pointerEvents: 'auto',
-  },
-  iconButtonActive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
   },
   iconText: {
-    fontSize: 20,
+    fontSize: 22,
+    color: COLORS.text,
+  },
+  bottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: SPACING.md,
+  },
+  bottomButton: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  bottomButtonActive: {
+    backgroundColor: COLORS.text,
+  },
+  bottomButtonText: {
+    ...TYPOGRAPHY.body,
+    fontWeight: '500',
+    color: '#A0A0A0',
+  },
+  bottomButtonTextActive: {
+    color: COLORS.background, // inverted for active
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingTop: SPACING.sm,
+  },
+  actionIcon: {
+    width: 48,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 24,
   },
 });
-

@@ -1,11 +1,10 @@
-import React, { useRef, useCallback, useState } from 'react';
+import React, { useRef, useCallback, useMemo } from 'react';
 import {
   FlatList,
   Image,
   View,
   StyleSheet,
   Dimensions,
-  Text,
 } from 'react-native';
 import { colors } from '../../../shared/theme';
 
@@ -59,7 +58,9 @@ export const PageFlipReader: React.FC<PageFlipReaderProps> = ({
 
   const keyExtractor = useCallback((item: Page) => `page-${item.index}`, []);
 
-  const displayPages = readingDirection === 'rtl' ? [...pages].reverse() : pages;
+  const displayPages = useMemo(() => {
+    return readingDirection === 'rtl' ? [...pages].reverse() : pages;
+  }, [pages, readingDirection]);
 
   return (
     <View style={styles.container}>
